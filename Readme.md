@@ -57,12 +57,11 @@ Options:
  * as root, run "systemctl status pastebin-monitor" to check run time status
  * as root, run "systemctl stop pastebin-monitor" to stop it
 
-```
  
 ## Using your own regexes
  Regexes are stored in the _regexes.txt_ file. It is trivial to modify this file and add new patterns to match.
  
- 
+``` 
  The format is:
  
     regex , URL logging file path/name , directory to store pasties
@@ -71,5 +70,5 @@ Examples:
 
     (password\b|pass\b|pswd\b|passwd\b|pwd\b|pass\b), passwords.txt, passwords
     (serial\b|cd-key\b|key\b|license\b),              serials.txt,   serials
-
+```
 **And yes, you can use commas in the regex. Just don't do it in filename or directory. Really, _don't_!**
