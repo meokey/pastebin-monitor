@@ -47,8 +47,9 @@ Options:
                         flushed (default: 100)
   -c CONNECTION_TIMEOUT, --connection-timeout=CONNECTION_TIMEOUT
                         Set the connection timeout waiting time (default: 60)
+```
 
-## How to enable it using systemd:
+## How to enable it using systemd
  * change <user> in file pastebin-monitor.service to appropriate value
  * copy file pastebin-monitor.service to /usr/lib/systemd/system/
  * (optional) as root, run "systemctl enable pastebin-monitor" to start it every time at system startup
