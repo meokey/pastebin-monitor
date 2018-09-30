@@ -3,8 +3,8 @@ Description=PasteBin Monitor
 After=network.target
 
 [Service]
-User=bill
-WorkingDirectory=/home/bill/pastebin-monitor
+User=<user>
+WorkingDirectory=/home/<user>/pastebin-monitor
 ExecStart=python3 pastebin_crawler.py
 ExecStop=/bin/kill -HUP $MAINPID
 KillMode=process

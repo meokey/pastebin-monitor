@@ -18,6 +18,15 @@ The tool periodically checks for new pastes and analyzes them. If they match a g
  * Timeout time (time to wait until a new attempt is made if connection times out due to a bad connection, in seconds)
  * Number of refreshes between flushes (number of refreshes until past Pastes are cleared from memory)
  * The regexes. See [Using your own regexes](#user-content-using-your-own-regexes)
+
+ Changes to original fabiospampinato/pastebin-monitor:
+ * save output to pastebin-monitor.log and tar log files once it grows to 300MB
+ * change Refresh time to 200, Delay to 5, Ban wait time to 50, and use random number to avoid being banned by pastebin
+ * reload regexs.txt file everytime refresh pastes, so restart the program is no longer necessary after changing regexs.txt
+ * add self.delayfactor to dymatically adjust Delay time based on duplicated paste from last time
+ * use data/ directory to save results
+ * add waiting time and other statistics in output for monitoring
+ * add systemd service file so to start it in background at system startup 
  
 ## Command line options
 
@@ -38,6 +47,15 @@ Options:
                         flushed (default: 100)
   -c CONNECTION_TIMEOUT, --connection-timeout=CONNECTION_TIMEOUT
                         Set the connection timeout waiting time (default: 60)
+
+ How to enable it using systemd:
+ * change <user> in file pastebin-monitor.service to appropriate value
+ * copy file pastebin-monitor.service to /usr/lib/systemd/system/
+ * (optional) as root, run "systemctl enable pastebin-monitor" to start it every time at system startup
+ * as root, run "systemctl start pastebin-monitor" to run it if it is not running
+ * as root, run "systemctl status pastebin-monitor" to check run time status
+ * as root, run "systemctl stop pastebin-monitor" to stop it
+
 ```
  
 ## Using your own regexes
