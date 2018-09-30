@@ -1,0 +1,31 @@
+#Format:
+#regex , URL logging file path/name , directory to store pasties
+(passw?or[dt]?|passe?|pswd|passwd|pwd|(api|consumer)_?key|adgangskode|wachtwoord|pasvorto|salasana|senha|parola|contraseña)\s?(\:|\=|\s|\"|\'){1,3}[\w\d]+, passwords.txt,  passwords
+(user|usr|u|access|client|oauth|subscription|api|usuario|salutnomon|d'utilisateur|nutzer|usoris)[\s\-_]?(name|id|token|secret|key)?\s?(\:|\=|\s|\"|\'){1,2}[\w\d]+,	users.txt,	passwords
+# http://DB_USERNAME:DB_PASSWORD@localhost:7474/db
+\:\/\/.*?\:.*?@\w+,	passwords.txt,	passwords
+[\w\d\-]+@[\w\d\-]+(\.[\w\d\-]+){1,}[\:\|][\w\d]+,	passwords.txt,  passwords
+#curl -H "Authorization: bearer token" -X POST -d "......."
+["']authorization\:\s?.*?\s+.*?["'],	passwords.txt,  passwords
+# curl -i -u username:password -H "Content-Type: application/json" http://www.abc.com
+\s+(\-u|\-\-user)\s+.*?\:.*?\s+,	users.txt,	passwords
+BEGIN (PRIVATE|OpenVPN Static) key,	certificates.txt,	leaks
+(serial|cd\-?|license|s/n)\s*(key|no|#)?(\s|\:|\=){1,2}(\s|\"|\')?,              serials.txt,    leaks
+[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?,           mails.txt,      mails
+(hack|exploit|leak|usernames),                    leaks.txt,      leaks
+SSN(\s|\:|\=)*\b(\d{3}-?\d{2}-?\d{4}|XXX-XX-XXXX)\b,	IDs.txt,	leaks
+(coupon|promotion)\s?(code)?(\:|\=|\s|\"|\'){1,2}[\w\d]+,	coupons.txt	leaks
+id=,                                              sql_inject.txt, leaks
+(https?|rtsp).*?(m?jpe?g|videostream|video|image|net_jpe?g|(view|yoics|cam|stream=)\d+|camimg|getdata|MotionJpeg|snapshot|faststream|auto|action|out|mpeg4|live|media|view|realmonitor|streaming)(:?(\.|=|\/|\?)(cgi|m?jpe?g|asf|sdp|h264|amp|stream|main|channels?))?,	webcam.txt,	res
+mediafire.*?\.(zip|rar|7z|pdf|xlsx?),	mediafire.txt,	res
+easybytez\.com.*?\.(zip|rar|7z|pdf|xlsx?),	easybytez.txt,	res
+db_backup,	db.txt,	leaks
+\.(sql|du?mp|bak|bson|accdb|backup|sqlite3?)\b,	db.txt,	leaks
+(\d+\@qq\.com|wxid_\d+)\b,	qq.txt,	leaks
+([1-9]\d{5}(18|19|([23]\d))\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx])|([1-9]\d{5}\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\d{2})\b,	IDs.txt,	leaks
+((13[0-9])|(14[5,7])|(15[0-3,5-9])|(17[0,3,5-8])|(18[0-9])|166|198|199|(147))\-?\d{4}\-?\d{4}\b,	phone.txt,	leaks
+https?.*?\bapis?\b.*?\.(json|php),	queries.txt,	leaks
+https?.*?\?q=,	queries.txt,	leaks
+https?.*?query\?,	queries.txt,	leaks
+.*?\.onion\/,	onion.txt,	res
+drive\.google\.com.*?(export=download|usp=sharing),	gdriver.txt,	res
