@@ -1,2 +1,2 @@
 PyQuery
-Python 3
+Python3
