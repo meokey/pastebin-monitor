@@ -1,0 +1,14 @@
+[Unit]
+Description=PasteBin Monitor
+After=network.target
+
+[Service]
+User=bill
+WorkingDirectory=/home/bill/pastebin-monitor
+ExecStart=python3 pastebin_crawler.py
+ExecStop=/bin/kill -HUP $MAINPID
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+
