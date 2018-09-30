@@ -319,7 +319,7 @@ class Crawler:
                             Logger().log('Good job! You caught up all new pastes since last update! {:d} pastes are already checked'.format(numofpastes-chkedpaste), True)
                             self.delayfactor = self.delayfactor + 0.02*(numofpastes-chkedpaste)
                         else:
-                            self.delayfactor = self.delayfactor - 0.08 if self.delayfactor > self.min_delayfactor else self.min_delayfactor
+                            self.delayfactor = (self.delayfactor - 0.08) if self.delayfactor > self.min_delayfactor else self.min_delayfactor
                     count += 1
 
                 if count == flush_after_x_refreshes:
