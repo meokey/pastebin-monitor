@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from math import ceil
+from math import ceil,fmod
 from optparse import OptionParser
 import os
 import re
@@ -7,6 +7,8 @@ import time
 import sys
 import urllib
 import urllib.request
+import tarfile
+import random
 
 from pyquery import PyQuery
 
@@ -128,6 +130,7 @@ class Logger:
     def log ( self, message, is_bold=False, color='', log_time=True):
         prefix = ''
         suffix = ''
+        logfile = 'pastebin_crawler.log'
 
         if log_time:
             prefix += '[{:s}] '.format(get_timestamp())
@@ -140,8 +143,17 @@ class Logger:
             suffix = self.shell_mod['RESET']
 
         message = prefix + message + suffix
-        print ( message )
-        sys.stdout.flush()
+#        print ( message )
+#        sys.stdout.flush()
+        size = os.path.getsize(logfile)
+        if size > 1024*1024*256:
+                tarf = logfile+'.gz'
+                mode='w:gz'
+                with tarfile.open(tarf,mode) as out:
+                    out.add(logfile)
+                os.remove(logfile)
+        with open(logfile, "a+") as logf:
+          logf.write(message+"\n")
 
     def error(self, err):
         self.log(err, True, 'RED')
@@ -176,6 +188,11 @@ class Crawler:
                     raise
                 except:
                     Logger().fatal_error('Malformed regexes file. Format: regex_pattern,URL logging file, directory logging file.')
+
+#            for regex,file,directory in self.regexes:
+#                Logger ().log ( directory+':\t'+file+':\t'+regex[:68])
+            Logger ().log ( '{:d} regex rules are refreshed.'.format(len(self.regexes)), True)
+
         except KeyboardInterrupt:
             raise
         except:
@@ -183,7 +200,8 @@ class Crawler:
 
 
     def __init__(self):
-        self.read_regexes()
+#        self.read_regexes()
+        self.delayfactor = 1	# dynamically adjust the delay time of retrieving each paste
 
 
 
@@ -228,7 +246,7 @@ class Crawler:
                     raise
                 except:
                     return self.OTHER_ERROR, None
-        if re.match ( r'Pastebin\.com - Access Denied Warning', page_html, re.IGNORECASE ) or 'blocked your IP' in page_html:
+        if re.match ( r'Pastebin\.com - Access Denied Warning', page_html, re.IGNORECASE ) or 'blocked your IP' in page_html or 'unatural browsing behavior' in page_html:
             return self.ACCESS_DENIED,None
         else:
             return self.OK,page('.maintable img').next('a')
@@ -240,20 +258,21 @@ class Crawler:
 
             for regex,file,directory in self.regexes:
                 if re.match ( regex, paste_txt, re.IGNORECASE ):
-                    Logger ().log ( 'Found a matching paste: ' + paste_url + ' (' + file + ')', True, 'CYAN' )
-                    self.save_result ( paste_url,paste_id,file,directory )
+                    Logger ().log ( 'Found a matching paste: ' + paste_url.rsplit('/')[-1] + ' (' + file + '): '+ regex[:40], True, 'CYAN' )
+                    self.save_result ( paste_url,paste_id,'data/'+file,'data/'+directory )
                     return True
-            Logger ().log ( 'Not matching paste: ' + paste_url )
+#            Logger ().log ( 'Not matching paste: ' + paste_url )
         except KeyboardInterrupt:
             raise
         except:
-            Logger ().log ( 'Error reading paste (probably a 404 or encoding issue).', True, 'YELLOW')
+            Logger ().log ( 'Error reading paste (probably a 404 or encoding issue or regex issue).', True, 'YELLOW')
         return False
 
     def save_result ( self, paste_url, paste_id, file, directory ):
+        fn,ext = os.path.splitext(os.path.split(file)[1])
         timestamp = get_timestamp()
         with open ( file, 'a' ) as matching:
-            matching.write ( timestamp + ' - ' + paste_url + '\n' )
+            matching.write ( fn + '-' + timestamp + '-' + paste_url + '\n' )
 
         try:
             os.mkdir(directory)
@@ -262,24 +281,45 @@ class Crawler:
         except:
             pass
 
-        with open( directory + '/' + timestamp.replace('/','_').replace(':','_').replace(' ','__') + '_' + paste_id.replace('/','') + '.txt', mode='w' ) as paste:
+        with open( directory + '/' + fn + '_' + timestamp.replace('/','_').replace(':','_').replace(' ','__') + '_' + paste_id.replace('/','') + '.txt', mode='w' ) as paste:
             paste_txt = PyQuery(url=paste_url)('#paste_code').text()
             paste.write(paste_txt + '\n')
 
 
-    def start ( self, refresh_time = 30, delay = 1, ban_wait = 5, flush_after_x_refreshes=100, connection_timeout=60 ):
+    def start ( self, refresh_time = 200, delay = 5, ban_wait = 30, flush_after_x_refreshes=100, connection_timeout=60 ):
         count = 0
         while True:
             status,pastes = self.get_pastes ()
+            numofpastes = len(pastes) or 0
+            Logger().log('Retreived {:d} pastes, will process using delay factor of {:.2f} ...'.format(numofpastes,self.delayfactor), True)
+            self.read_regexes()
 
             start_time = time.time()
             if status == self.OK:
+                delayed = 0
+                currpaste = 0
+                totaldelayed = 0
+                chkedpaste = 0
                 for paste in pastes:
+                    currpaste += 1
                     paste_id = PyQuery ( paste ).attr('href')
                     self.new_checked_ids.append ( paste_id )
                     if paste_id not in self.prev_checked_ids:
+                        chkedpaste += 1
                         self.check_paste ( paste_id )
-                        time.sleep ( delay )
+                        delaytime = delay*random.uniform(0.6,1.1)*self.delayfactor
+                        totaldelayed += delaytime
+                        Logger().log('Paste {:02d}/{:02d} done; Waiting {:.2f} seconds for next paste ...'.format(currpaste,numofpastes,delaytime), False)
+                        if currpaste < numofpastes:
+                            time.sleep(delaytime)
+
+                    if currpaste == numofpastes:
+                        Logger().log('Average/Total waiting time is {:.2f}s/{:.2f}m for the pastes'.format(totaldelayed/numofpastes,totaldelayed/60), False)
+                        if chkedpaste < numofpastes:
+                            Logger().log('Good job! You caught up all new pastes since last update! {:d} pastes are already checked'.format(numofpastes-chkedpaste), True)
+                            self.delayfactor = self.delayfactor + 0.02*(numofpastes-chkedpaste)
+                        else:
+                            self.delayfactor = self.delayfactor - 0.08
                     count += 1
 
                 if count == flush_after_x_refreshes:
@@ -290,13 +330,17 @@ class Crawler:
                 self.new_checked_ids = []
 
                 elapsed_time = time.time() - start_time
-                sleep_time = ceil(max(0,(refresh_time - elapsed_time)))
+                sleep_time = ceil(max(0,(refresh_time*random.gauss(1,0.2) - elapsed_time)))
                 if sleep_time > 0:
                     Logger().log('Waiting {:d} seconds to refresh...'.format(sleep_time), True)
                     time.sleep ( sleep_time )
+                else:
+                    Logger().log('refresh_time={:d}, elapsed_time={:.2f}, sleep_time={:.2f}'.format(refresh_time,elapsed_time,sleep_time), False)
             elif status == self.ACCESS_DENIED:
+                delayed += 1
+                self.delayfactor = 1
                 Logger ().log ( 'Damn! It looks like you have been banned (probably temporarily)', True, 'YELLOW' )
-                for n in range ( 0, ban_wait ):
+                for n in range ( 0, ceil(ban_wait*random.gauss(1+delayed*0.2,0.2)) ):
                     Logger ().log ( 'Please wait ' + str ( ban_wait - n ) + ' minute' + ( 's' if ( ban_wait - n ) > 1 else '' ) )
                     time.sleep ( 60 )
             elif status == self.CONNECTION_FAIL:
@@ -308,9 +352,9 @@ class Crawler:
 
 def parse_input():
     parser = OptionParser()
-    parser.add_option('-r', '--refresh-time', help='Set the refresh time (default: 30)', dest='refresh_time', type='int', default=30)
-    parser.add_option('-d', '--delay-time', help='Set the delay time (default: 1)', dest='delay', type='float', default=1)
-    parser.add_option('-b', '--ban-wait-time', help='Set the ban wait time (default: 5)', dest='ban_wait', type='int', default=5)
+    parser.add_option('-r', '--refresh-time', help='Set the refresh time (default: 200)', dest='refresh_time', type='int', default=200)
+    parser.add_option('-d', '--delay-time', help='Set the delay time (default: 5)', dest='delay', type='float', default=5)
+    parser.add_option('-b', '--ban-wait-time', help='Set the ban wait time (default: 30)', dest='ban_wait', type='int', default=30)
     parser.add_option('-f', '--flush-after-x-refreshes', help='Set the number of refreshes after which memory is flushed (default: 100)', dest='flush_after_x_refreshes', type='int', default=100)
     parser.add_option('-c', '--connection-timeout', help='Set the connection timeout waiting time (default: 60)', dest='connection_timeout', type='float', default=60)
     (options, args) = parser.parse_args()
