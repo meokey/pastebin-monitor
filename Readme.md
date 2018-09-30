@@ -28,11 +28,11 @@ Usage: pastebin_crawler.py [options]
 Options:
   -h, --help            show this help message and exit
   -r REFRESH_TIME, --refresh-time=REFRESH_TIME
-                        Set the refresh time (default: 30)
+                        Set the refresh time (default: 200)
   -d DELAY, --delay-time=DELAY
-                        Set the delay time (default: 1)
+                        Set the delay time (default: 5)
   -b BAN_WAIT, --ban-wait-time=BAN_WAIT
-                        Set the ban wait time (default: 5)
+                        Set the ban wait time (default: 30)
   -f FLUSH_AFTER_X_REFRESHES, --flush-after-x-refreshes=FLUSH_AFTER_X_REFRESHES
                         Set the number of refreshes after which memory is
                         flushed (default: 100)
