@@ -317,7 +317,7 @@ class Crawler:
                         Logger().log('Average/Total waiting time is {:.2f}s/{:.2f}m for the pastes'.format(totaldelayed/numofpastes,totaldelayed/60), False)
                         if chkedpaste < numofpastes:
                             Logger().log('Good job! You caught up all new pastes since last update! {:d} pastes are already checked'.format(numofpastes-chkedpaste), True)
-                            self.delayfactor = self.delayfactor + 0.02*fabs(numofpastes-chkedpaste)
+                            self.delayfactor = self.delayfactor + 0.04*fabs(numofpastes-chkedpaste)
                         else:
                             self.delayfactor = self.min_delayfactor if self.delayfactor <= self.min_delayfactor else (self.delayfactor - 0.08)
                     count += 1
