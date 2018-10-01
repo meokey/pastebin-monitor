@@ -202,7 +202,8 @@ class Crawler:
     def __init__(self):
 #        self.read_regexes()
         self.delayfactor = 1	# dynamically adjust the delay time of retrieving each paste
-        self.min_delayfactor = 0.5
+        self.min_delayfactor = 0.5	# minimal acceptable delay factor preventing from being banned
+        self.max_delayfactor = 1.6	# maxium acceptable delay factor for efficiency
 
 
     def get_pastes ( self ):
@@ -265,7 +266,7 @@ class Crawler:
         except KeyboardInterrupt:
             raise
         except:
-            Logger ().log ( 'Error reading paste (probably a 404 or encoding issue or regex issue).', True, 'YELLOW')
+            Logger ().log ( 'Error reading paste {:s} (probably a 404 or encoding issue or regex issue).'.format(paste_id), True, 'YELLOW')
         return False
 
     def save_result ( self, paste_url, paste_id, file, directory ):
@@ -290,9 +291,6 @@ class Crawler:
         count = 0
         while True:
             status,pastes = self.get_pastes ()
-            numofpastes = len(pastes) or 0
-            Logger().log('Retreived {:d} pastes, will process using delay factor of {:.2f} ...'.format(numofpastes,self.delayfactor), True)
-            self.read_regexes()
 
             start_time = time.time()
             if status == self.OK:
@@ -300,6 +298,9 @@ class Crawler:
                 currpaste = 0
                 totaldelayed = 0
                 chkedpaste = 0
+                numofpastes = len(pastes) or 0
+                Logger().log('Retreived {:d} pastes, will process using delay factor of {:.2f} ...'.format(numofpastes,self.delayfactor),True)
+                self.read_regexes()
                 for paste in pastes:
                     currpaste += 1
                     paste_id = PyQuery ( paste ).attr('href')
@@ -317,9 +318,9 @@ class Crawler:
                         Logger().log('Average/Total waiting time is {:.2f}s/{:.2f}m for the pastes'.format(totaldelayed/numofpastes,totaldelayed/60), False)
                         if chkedpaste < numofpastes:
                             Logger().log('Good job! You caught up all new pastes since last update! {:d} pastes are already checked'.format(numofpastes-chkedpaste), True)
-                            self.delayfactor = self.delayfactor + 0.04*fabs(numofpastes-chkedpaste)
+                            self.delayfactor = self.max_delayfactor if self.delayfactor >= self.max_delayfactor else (self.delayfactor + 0.04*fabs(numofpastes-chkedpaste))
                         else:
-                            self.delayfactor = self.min_delayfactor if self.delayfactor <= self.min_delayfactor else (self.delayfactor - 0.08)
+                            self.delayfactor = self.min_delayfactor if self.delayfactor <= self.min_delayfactor else (self.delayfactor - 0.24)
                     count += 1
 
                 if count == flush_after_x_refreshes:
