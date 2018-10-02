@@ -10,6 +10,7 @@ import urllib
 import urllib.request
 import tarfile
 import random
+import signal
 
 from pyquery import PyQuery
 
@@ -202,6 +203,7 @@ class Crawler:
 
     def __init__(self):
 #        self.read_regexes()
+        self.kill_now = False
         self.delayfactor = 1	# dynamically adjust the delay time of retrieving each paste
         self.min_delayfactor = 0.5	# minimal acceptable delay factor preventing from being banned
         self.max_delayfactor = 1.6	# maxium acceptable delay factor for efficiency
@@ -210,6 +212,8 @@ class Crawler:
         self.starttime = time.time()
         self.starttime_ts = get_timestamp()
         self.totalerrors = 0
+        signal.signal(signal.SIGINT, self.handle)
+        signal.signal(signal.SIGTERM, self.handle)
 
     def runduration(self,timestamp1, timestamp2):
         dt1 = datetime.datetime.fromtimestamp(timestamp1)
@@ -224,6 +228,9 @@ class Crawler:
         dur = dur + '' if rd.seconds == 0 else ', {:d} seconds'.format(rd.seconds)
 
         return dur.strip(', ')
+
+    def handle(self, signum, frame):
+        self.kill_now = True
 
     def __del__(self):
         Logger ().log ( 'Since started at {:s}, the program has run for {:s}.\nIt processed {:d} pastes, including {:d} recorded and {:d} errors.'.format(self.starttime_ts, self.runduration(self.starttime,time.time()), self.totalpastes, self.validpastes, self.totalerrors), True)
@@ -318,6 +325,8 @@ class Crawler:
     def start ( self, refresh_time = 200, delay = 5, ban_wait = 30, flush_after_x_refreshes=100, connection_timeout=60 ):
         count = 0
         while True:
+            if self.kill_now == True:
+                exit()
             status,pastes = self.get_pastes ()
 
             start_time = time.time()
@@ -350,6 +359,8 @@ class Crawler:
                         else:
                             self.delayfactor = self.min_delayfactor if self.delayfactor <= self.min_delayfactor else (self.delayfactor - 0.24)
                     count += 1
+                    if self.kill_now == True:
+                        exit()
 
                 if count == flush_after_x_refreshes:
                     self.prev_checked_ids = self.new_checked_ids
