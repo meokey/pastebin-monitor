@@ -3,7 +3,8 @@ from math import ceil,fmod,fabs
 from optparse import OptionParser
 import os
 import re
-import time
+import time,datetime
+import dateutil.relativedelta
 import sys
 import urllib
 import urllib.request
@@ -204,7 +205,28 @@ class Crawler:
         self.delayfactor = 1	# dynamically adjust the delay time of retrieving each paste
         self.min_delayfactor = 0.5	# minimal acceptable delay factor preventing from being banned
         self.max_delayfactor = 1.6	# maxium acceptable delay factor for efficiency
+        self.totalpastes = 0
+        self.validpastes = 0
+        self.starttime = time.time()
+        self.starttime_ts = get_timestamp()
+        self.totalerrors = 0
 
+    def runduration(self,timestamp1, timestamp2):
+        dt1 = datetime.datetime.fromtimestamp(timestamp1)
+        dt2 = datetime.datetime.fromtimestamp(timestamp2)
+        rd = dateutil.relativedelta.relativedelta (dt2, dt1)
+
+        dur = '' if rd.years == 0 else '{:d} years'.format(rd.years)
+        dur = dur + '' if rd.months == 0 else ', {:d} months'.format(rd.months)
+        dur = dur + '' if rd.days == 0 else ', {:d} days'.format(rd.days)
+        dur = dur + '' if rd.hours == 0 else ', {:d} hours'.format(rd.hours)
+        dur = dur + '' if rd.minutes == 0 else ', {:d} minutes'.format(rd.minutes)
+        dur = dur + '' if rd.seconds == 0 else ', {:d} seconds'.format(rd.seconds)
+
+        return dur.strip(', ')
+
+    def __del__(self):
+        Logger ().log ( 'Since started at {:s}, the program has run for {:s}.\nIt processed {:d} pastes, including {:d} recorded and {:d} errors.'.format(self.starttime_ts, self.runduration(self.starttime,time.time()), self.totalpastes, self.validpastes, self.totalerrors), True)
 
     def get_pastes ( self ):
         Logger ().log ( 'Getting pastes', True )
@@ -253,6 +275,7 @@ class Crawler:
             return self.OK,page('.maintable img').next('a')
 
     def check_paste ( self, paste_id ):
+        self.totalpastes += 1
         paste_url = self.PASTEBIN_URL + paste_id
         try:
             paste_txt = PyQuery ( url = paste_url )('#paste_code').text()
@@ -265,11 +288,16 @@ class Crawler:
 #            Logger ().log ( 'Not matching paste: ' + paste_url )
         except KeyboardInterrupt:
             raise
-        except:
-            Logger ().log ( 'Error reading paste {:s} (probably a 404 or encoding issue or regex issue).'.format(paste_id), True, 'YELLOW')
+        except Exception as inst:
+            self.totalerrors += 1
+            if str(inst) == 'HTTP Error 404: Not Found':
+                Logger ().log ( '404 Error reading paste {:s}.'.format(paste_id), True, 'YELLOW')
+            else:
+                Logger ().log ( 'Error reading paste {:s} (probably encoding issue or regex issue), error is {:s}.'.format(paste_id,str(inst)), True, 'YELLOW')
         return False
 
     def save_result ( self, paste_url, paste_id, file, directory ):
+        self.validpastes += 1
         fn,ext = os.path.splitext(os.path.split(file)[1])
         timestamp = get_timestamp()
         with open ( file, 'a' ) as matching:
@@ -338,6 +366,7 @@ class Crawler:
                 else:
                     Logger().log('refresh_time={:d}, elapsed_time={:.2f}, sleep_time={:.2f}'.format(refresh_time,elapsed_time,sleep_time), False)
             elif status == self.ACCESS_DENIED:
+                self.totalerrors += 1
                 delayed += 1
                 self.delayfactor = 1
                 Logger ().log ( 'Damn! It looks like you have been banned (probably temporarily)', True, 'YELLOW' )
@@ -345,9 +374,11 @@ class Crawler:
                     Logger ().log ( 'Please wait ' + str ( ban_wait - n ) + ' minute' + ( 's' if ( ban_wait - n ) > 1 else '' ) )
                     time.sleep ( 60 )
             elif status == self.CONNECTION_FAIL:
+                self.totalerrors += 1
                 Logger().log ( 'Connection down. Waiting {:d} seconds and trying again'.format(connection_timeout), True, 'RED')
                 time.sleep(connection_timeout)
             elif status == self.OTHER_ERROR:
+                self.totalerrors += 1
                 Logger().log('Unknown error. Maybe an encoding problem? Trying again.'.format(connection_timeout), True,'RED')
                 time.sleep(1)
 
