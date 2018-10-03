@@ -20,96 +20,97 @@ def get_timestamp():
 
 def all_python_encodings():
      return ["ascii",
-             "big5",
-             "big5hkscs",
-             "cp037",
-             "cp424",
-             "cp437",
-             "cp500",
-             "cp720",
-             "cp737",
-             "cp775",
-             "cp850",
-             "cp852",
-             "cp855",
-             "cp856",
-             "cp857",
-             "cp858",
-             "cp860",
-             "cp861",
-             "cp862",
-             "cp863",
-             "cp864",
-             "cp865",
-             "cp866",
-             "cp869",
-             "cp874",
-             "cp875",
-             "cp932",
-             "cp949",
-             "cp950",
-             "cp1006",
-             "cp1026",
-             "cp1140",
-             "cp1250",
-             "cp1251",
+             "iso8859_1",
              "cp1252",
-             "cp1253",
-             "cp1254",
-             "cp1255",
-             "cp1256",
-             "cp1257",
-             "cp1258",
+             "utf_8",
+             "utf_16",
+             "utf_32",
+             "cp1251",
+             "shift_jis",
              "euc_jp",
-             "euc_jis_2004",
-             "euc_jisx0213",
              "euc_kr",
              "gb2312",
              "gbk",
              "gb18030",
-             "hz",
-             "iso2022_jp",
-             "iso2022_jp_1",
-             "iso2022_jp_2",
-             "iso2022_jp_2004",
-             "iso2022_jp_3",
-             "iso2022_jp_ext",
-             "iso2022_kr",
              "latin_1",
              "iso8859_2",
-             "iso8859_3",
-             "iso8859_4",
-             "iso8859_5",
-             "iso8859_6",
-             "iso8859_7",
-             "iso8859_8",
-             "iso8859_9",
-             "iso8859_10",
-             "iso8859_13",
-             "iso8859_14",
+             "cp1250",
              "iso8859_15",
-             "iso8859_16",
-             "johab",
-             "koi8_r",
-             "koi8_u",
-             "mac_cyrillic",
-             "mac_greek",
-             "mac_iceland",
-             "mac_latin2",
-             "mac_roman",
-             "mac_turkish",
-             "ptcp154",
-             "shift_jis",
-             "shift_jis_2004",
-             "shift_jisx0213",
-             "utf_32",
+             "cp1256",
+             "iso8859_9",
+             "cp1254",
+             "big5",
+             "cp874",
+#             "big5hkscs",
+#             "cp037",
+#             "cp424",
+#             "cp437",
+#             "cp500",
+#             "cp720",
+#             "cp737",
+#             "cp775",
+#             "cp850",
+#             "cp852",
+#             "cp855",
+#             "cp856",
+#             "cp857",
+#             "cp858",
+#             "cp860",
+#             "cp861",
+#             "cp862",
+#             "cp863",
+#             "cp864",
+#             "cp865",
+#             "cp866",
+#             "cp869",
+#             "cp875",
+#             "cp932",
+#             "cp949",
+#             "cp950",
+#             "cp1006",
+#             "cp1026",
+#             "cp1140",
+#             "cp1253",
+#             "cp1255",
+#             "cp1257",
+#             "cp1258",
+#             "euc_jis_2004",
+#             "euc_jisx0213",
+#             "hz",
+#             "iso2022_jp",
+#             "iso2022_jp_1",
+#             "iso2022_jp_2",
+#             "iso2022_jp_2004",
+#             "iso2022_jp_3",
+#             "iso2022_jp_ext",
+#             "iso2022_kr",
+#             "iso8859_3",
+#             "iso8859_4",
+#             "iso8859_5",
+#             "iso8859_6",
+#             "iso8859_7",
+#             "iso8859_8",
+#             "iso8859_10",
+#             "iso8859_13",
+#             "iso8859_14",
+#             "iso8859_16",
+#             "johab",
+#             "koi8_r",
+#             "koi8_u",
+#             "mac_cyrillic",
+#             "mac_greek",
+#             "mac_iceland",
+#             "mac_latin2",
+#             "mac_roman",
+#             "mac_turkish",
+#             "ptcp154",
+#             "shift_jis_2004",
+#             "shift_jisx0213",
              "utf_32_be",
              "utf_32_le",
-             "utf_16",
              "utf_16_be",
              "utf_16_le",
              "utf_7",
-             "utf_8",
              "utf_8_sig"]
 
 
@@ -222,13 +223,12 @@ class Crawler:
         dt1 = datetime.datetime.fromtimestamp(timestamp1)
         dt2 = datetime.datetime.fromtimestamp(timestamp2)
         rd = dateutil.relativedelta.relativedelta (dt2, dt1)
-
         dur = '' if rd.years == 0 else '{:d} years'.format(rd.years)
-        dur = dur + '' if rd.months == 0 else ', {:d} months'.format(rd.months)
-        dur = dur + '' if rd.days == 0 else ', {:d} days'.format(rd.days)
-        dur = dur + '' if rd.hours == 0 else ', {:d} hours'.format(rd.hours)
-        dur = dur + '' if rd.minutes == 0 else ', {:d} minutes'.format(rd.minutes)
-        dur = dur + '' if rd.seconds == 0 else ', {:d} seconds'.format(rd.seconds)
+        dur = dur + ('' if rd.months == 0 else ', {:d} months'.format(rd.months))
+        dur = dur + ('' if rd.days == 0 else ', {:d} days'.format(rd.days))
+        dur = dur + ('' if rd.hours == 0 else ', {:d} hours'.format(rd.hours))
+        dur = dur + ('' if rd.minutes == 0 else ', {:d} minutes'.format(rd.minutes))
+        dur = dur + ('no time' if rd.seconds == 0 else ', {:d} seconds'.format(rd.seconds))
 
         return dur.strip(', ')
 
@@ -264,25 +264,27 @@ class Crawler:
             raise
         except:
             worked = False
-            for enc in all_python_encodings():
-                try:
-                    page_html = page.html(encoding=enc)
-                    worked = True
-                    break
-                except KeyboardInterrupt:
-                    raise
-                except:
-                    pass
+            # try utf8 first
+            try:
+                f = urllib.request.urlopen(Crawler.PASTES_URL)
+                page_html = PyQuery(str(f.read()).encode('utf8')).html()
+                f.close()
+                worked = True
+            except KeyboardInterrupt:
+                raise
+            except:
+                pass
             if not worked:
-                # One last try...
-                try:
-                    f = urllib.request.urlopen(Crawler.PASTES_URL)
-                    page_html = PyQuery(str(f.read()).encode('utf8')).html()
-                    f.close()
-                except KeyboardInterrupt:
-                    raise
-                except:
-                    return self.OTHER_ERROR, None
+                for enc in all_python_encodings():
+                    try:
+                        page_html = page.html(encoding=enc)
+                        worked = True
+                        break
+                    except KeyboardInterrupt:
+                        raise
+                    except:
+                        return self.OTHER_ERROR, None
+
         if re.match ( r'Pastebin\.com - Access Denied Warning', page_html, re.IGNORECASE ) or 'blocked your IP' in page_html or 'unatural browsing behavior' in page_html:
             return self.ACCESS_DENIED,None
         else:
