@@ -6,7 +6,7 @@ After=network.target
 User=<user>
 WorkingDirectory=/home/<user>/pastebin-monitor
 ExecStart=python3 pastebin_crawler.py
-ExecStop=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill $MAINPID
 KillMode=process
 
 [Install]
