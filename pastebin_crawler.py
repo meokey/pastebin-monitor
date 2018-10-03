@@ -232,8 +232,11 @@ class Crawler:
     def handle(self, signum, frame):
         self.kill_now = True
 
-    def __del__(self):
+    def conclude(self):
         Logger ().log ( 'Since started at {:s}, the program has run for {:s}.\nIt processed {:d} pastes, including {:d} recorded and {:d} errors.'.format(self.starttime_ts, self.runduration(self.starttime,time.time()), self.totalpastes, self.validpastes, self.totalerrors), True)
+
+    def __del__(self):
+        self.conclude()
 
     def get_pastes ( self ):
         Logger ().log ( 'Getting pastes', True )
@@ -328,6 +331,8 @@ class Crawler:
         while True:
             if self.kill_now == True:
                 exit()
+
+            self.conclude()
             status,pastes = self.get_pastes ()
 
             start_time = time.time()
