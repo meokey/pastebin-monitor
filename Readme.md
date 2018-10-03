@@ -72,3 +72,7 @@ Examples:
     (serial\b|cd-key\b|key\b|license\b),              serials.txt,   serials
 ```
 **And yes, you can use commas in the regex. Just don't do it in filename or directory. Really, _don't_!**
+
+[![Repo on GitHub](https://img.shields.io/badge/repo-GitHub-3D76C2.svg)](https://github.com/meokey/pastebin-monitor)
+[![Repo on GitLab](https://img.shields.io/badge/repo-GitLab-6C488A.svg)](https://gitlab.com/meokey/pastebin-monitor)
+[![Repo on BitBucket](https://img.shields.io/badge/repo-BitBucket-1F5081.svg)](https://bitbucket.org/meokey/pastebin-monitor)
