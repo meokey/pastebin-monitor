@@ -180,6 +180,7 @@ class Crawler:
 
     PASTEBIN_URL = 'http://pastebin.com'
     PASTES_URL = PASTEBIN_URL + '/archive'
+    PASTESRAW_URL = PASTEBIN_URL + '/raw'
     REGEXES_FILE = 'regexes.txt'
     OK = 1
     ACCESS_DENIED = -1
@@ -327,9 +328,10 @@ class Crawler:
 
     def check_paste ( self, paste_id ):
         self.totalpastes += 1
-        paste_url = self.PASTEBIN_URL + paste_id
+        paste_url = self.PASTEBIN_URL + (paste_id if paste_id[0] == '/' else '/' + paste_id)
         try:
-            paste_txt = PyQuery ( url = paste_url )('#paste_code').text()
+            #paste_txt = PyQuery ( url = paste_url )('#paste_code').text()
+            paste_txt = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
 
             for regex,file,directory in self.regexes:
                 if self.kill_now == True:
@@ -337,7 +339,8 @@ class Crawler:
                 r = re.search ( regex, paste_txt, re.IGNORECASE )
                 if r:
                     Logger ().match( 'Found a matching paste: ' + paste_url.rsplit('/')[-1] + ' (' + file + '): '+ r[0] )
-                    self.save_result ( paste_url,paste_id,'data/'+file,'data/'+directory )
+                    #self.save_result ( paste_url,paste_id,'data/'+file,'data/'+directory )
+                    self.save_result( paste_id=paste_id,paste_txt=paste_txt,file='data/'+file,directory='data/'+directory )
                     return True
             #Logger (self.verbose).log ( 'Not matching paste: ' + paste_url )
         except KeyboardInterrupt:
@@ -350,8 +353,9 @@ class Crawler:
                 Logger ().warn ( 'Error reading paste {:s} (probably encoding issue or regex issue), error is {:s}.'.format(paste_id,str(inst)))
         return False
 
-    def save_result ( self, paste_url, paste_id, file, directory ):
+    def save_result ( self, paste_id, paste_txt, file, directory ):
         self.validpastes += 1
+        paste_url = self.PASTESRAW_URL + (paste_id if paste_id[0] == '/' else '/' + paste_id)
         fn,ext = os.path.splitext(os.path.split(file)[1])
         timestamp = get_timestamp()
         with open ( file, 'a' ) as matching:
@@ -365,7 +369,9 @@ class Crawler:
             pass
 
         with open( directory + '/' + fn + '_' + timestamp.replace('/','_').replace(':','_').replace(' ','__') + '_' + paste_id.replace('/','') + '.txt', mode='w' ) as paste:
-            paste_txt = PyQuery(url=paste_url)('#paste_code').text()
+            if paste_txt == '':
+                paste_txt = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
+                #paste_txt = PyQuery(url=paste_url)('#paste_code').text()
             paste.write(paste_txt + '\n')
 
 
