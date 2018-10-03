@@ -147,6 +147,7 @@ class Logger:
         message = prefix + message + suffix
 #        print ( message )
 #        sys.stdout.flush()
+## tar log files if the size reachs 256MB
         size = os.path.getsize(logfile)
         if size > 1024*1024*256:
                 tarf = logfile+'.gz'
@@ -207,11 +208,13 @@ class Crawler:
         self.delayfactor = 1	# dynamically adjust the delay time of retrieving each paste
         self.min_delayfactor = 0.5	# minimal acceptable delay factor preventing from being banned
         self.max_delayfactor = 1.6	# maxium acceptable delay factor for efficiency
+## values used in self.conclude() stats
         self.totalpastes = 0
         self.validpastes = 0
         self.starttime = time.time()
         self.starttime_ts = get_timestamp()
         self.totalerrors = 0
+## register os signals to response to kill interruption
         signal.signal(signal.SIGINT, self.handle)
         signal.signal(signal.SIGTERM, self.handle)
 
@@ -233,6 +236,7 @@ class Crawler:
         self.kill_now = True
 
     def conclude(self):
+## stats from startup
         Logger ().log ( 'Since started at {:s}, the program has run for {:s}.\nIt processed {:d} pastes, including {:d} recorded and {:d} errors.'.format(self.starttime_ts, self.runduration(self.starttime,time.time()), self.totalpastes, self.validpastes, self.totalerrors), True)
 
     def __del__(self):
@@ -302,7 +306,7 @@ class Crawler:
         except Exception as inst:
             self.totalerrors += 1
             if str(inst) == 'HTTP Error 404: Not Found':
-                Logger ().log ( '404 Error reading paste {:s}.'.format(paste_id), True, 'YELLOW')
+                Logger ().log ( '404 Error reading paste {:s}.'.format(paste_id), True, 'YELLOW')	# likely being removed
             else:
                 Logger ().log ( 'Error reading paste {:s} (probably encoding issue or regex issue), error is {:s}.'.format(paste_id,str(inst)), True, 'YELLOW')
         return False
@@ -361,11 +365,11 @@ class Crawler:
                         Logger().log('Average/Total waiting time is {:.2f}s/{:.2f}m for the pastes'.format(totaldelayed/numofpastes,totaldelayed/60), False)
                         if chkedpaste < numofpastes:
                             Logger().log('Good job! You caught up all new pastes since last update! {:d} pastes are already checked'.format(numofpastes-chkedpaste), True)
-                            self.delayfactor = self.max_delayfactor if self.delayfactor >= self.max_delayfactor else (self.delayfactor + 0.04*fabs(numofpastes-chkedpaste))
+                            self.delayfactor = self.max_delayfactor if self.delayfactor >= self.max_delayfactor else (self.delayfactor + 0.04*fabs(numofpastes-chkedpaste))	# slow down a little bit
                         else:
-                            self.delayfactor = self.min_delayfactor if self.delayfactor <= self.min_delayfactor else (self.delayfactor - 0.24)
+                            self.delayfactor = self.min_delayfactor if self.delayfactor <= self.min_delayfactor else (self.delayfactor - 0.24)	# speed up a little bit
                     count += 1
-                    if self.kill_now == True:
+                    if self.kill_now == True:	# caught kill signal
                         exit()
 
                 if count == flush_after_x_refreshes:
@@ -388,7 +392,7 @@ class Crawler:
                 self.delayfactor = 1
                 Logger ().log ( 'Damn! It looks like you have been banned (probably temporarily)', True, 'YELLOW' )
                 for n in range ( 0, ceil(ban_wait*random.gauss(1+delayed*0.2,0.2)) ):
-                    Logger ().log ( 'Please wait ' + str ( ban_wait - n ) + ' minute' + ( 's' if ( ban_wait - n ) > 1 else '' ) )
+                    Logger ().log ( 'Please wait ' + str ( ban_wait - n ) + ' more minute' + ( 's' if ( ban_wait - n ) > 1 else '' ) )
                     time.sleep ( 60 )
             elif status == self.CONNECTION_FAIL:
                 self.totalerrors += 1
