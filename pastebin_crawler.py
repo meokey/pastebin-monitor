@@ -288,8 +288,9 @@ class Crawler:
             paste_txt = PyQuery ( url = paste_url )('#paste_code').text()
 
             for regex,file,directory in self.regexes:
-                if re.match ( regex, paste_txt, re.IGNORECASE ):
-                    Logger ().log ( 'Found a matching paste: ' + paste_url.rsplit('/')[-1] + ' (' + file + '): '+ regex[:40], True, 'CYAN' )
+                r = re.search ( regex, paste_txt, re.IGNORECASE )
+                if r:
+                    Logger ().log ( 'Found a matching paste: ' + paste_url.rsplit('/')[-1] + ' (' + file + '): '+ r[0], True, 'CYAN' )
                     self.save_result ( paste_url,paste_id,'data/'+file,'data/'+directory )
                     return True
 #            Logger ().log ( 'Not matching paste: ' + paste_url )
