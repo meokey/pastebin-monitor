@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+#coding: utf-8
+
 from math import ceil,fmod,fabs
 from optparse import OptionParser
 import os
+import sys
 import re
 import time,datetime
 import dateutil.relativedelta
@@ -11,6 +14,7 @@ import urllib.request
 import tarfile
 import random
 import signal
+import base64
 
 from pyquery import PyQuery
 
@@ -129,8 +133,9 @@ class Logger:
        'UNDERLINE' : '\033[4m',
        'RESET' : '\033[0m'
     }
-    def __init__(self,verbose=False):
+    def __init__(self,verbose=False,journal=False):
         self.verbose = verbose
+        self.journal = journal
 
     def log ( self, message, is_bold=False, color='', log_time=True):
         prefix = ''
@@ -147,8 +152,8 @@ class Logger:
 
             suffix = self.shell_mod['RESET']
 
-        message = prefix + message + suffix
-        #print ( message )
+        messages = prefix + message + suffix
+        #print ( messages )
         #sys.stdout.flush()
 
         if (self.verbose == True) or (is_bold == True):
@@ -161,7 +166,10 @@ class Logger:
                     out.add(logfile)
                 os.remove(logfile)
             with open(logfile, "a+") as logf:
-                logf.write(message+"\n")
+                logf.write(messages+"\n")
+        if self.journal:
+            sys.stdout.write(message+"\n")
+            sys.stdout.flush()
 
     def match(self, err):
         self.log(err, True, 'CYAN')
@@ -180,7 +188,7 @@ class Crawler:
 
     PASTEBIN_URL = 'http://pastebin.com'
     PASTES_URL = PASTEBIN_URL + '/archive'
-    PASTESRAW_URL = PASTEBIN_URL + '/raw'
+    PASTESRAW_URL = PASTEBIN_URL + '/raw.php?i='
     REGEXES_FILE = 'regexes.txt'
     OK = 1
     ACCESS_DENIED = -1
@@ -270,15 +278,15 @@ class Crawler:
 
     def conclude(self):
 ## stats from startup
-        Logger(self.verbose).log ('Since started at {:s}, the program has run for {:s}.'.format(self.starttime_ts, self.runduration(self.starttime,time.time())), True)
-        Logger(self.verbose).log ('It processed {:d} pastes, including {:d} recorded and {:d} errors.'.format(self.totalpastes, self.validpastes, self.totalerrors), True)
+        Logger(verbose=self.verbose).log ('Since started at {:s}, the program has run for {:s}.'.format(self.starttime_ts, self.runduration(self.starttime,time.time())), True)
+        Logger(self.verbose,journal=True).log ('It processed {:d} pastes, including {:d} recorded and {:d} errors.'.format(self.totalpastes, self.validpastes, self.totalerrors), True)
         Logger(self.verbose).log ('Averagely it took {:.2f}s to fetch pastes, and {:.2f}s to check a single paste.'.format(self.stats['get_pastes']['avg'](), self.stats['check_paste']['avg']()), True)
 
     def __del__(self):
         self.conclude()
 
     def get_pastes ( self ):
-        Logger (self.verbose).log ( 'Getting pastes', True )
+        Logger (self.verbose,journal=True).log ( 'Getting pastes', True )
         try:
             page = PyQuery ( url = self.PASTES_URL )
         except KeyboardInterrupt:
@@ -331,14 +339,15 @@ class Crawler:
         paste_url = self.PASTEBIN_URL + (paste_id if paste_id[0] == '/' else '/' + paste_id)
         try:
             #paste_txt = PyQuery ( url = paste_url )('#paste_code').text()
-            paste_txt = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
+            content = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
+            paste_txt = PyQuery (content)('#paste_code').text()
 
             for regex,file,directory in self.regexes:
                 if self.kill_now == True:
                     exit()
                 r = re.search ( regex, paste_txt, re.IGNORECASE )
                 if r:
-                    Logger ().match( 'Found a matching paste: ' + paste_url.rsplit('/')[-1] + ' (' + file + '): '+ r[0] )
+                    Logger ().match( 'Found a matching paste: ' + paste_url.rsplit('/')[-1] + ' (' + file + '): '+ r[0][:50] )
                     #self.save_result ( paste_url,paste_id,'data/'+file,'data/'+directory )
                     self.save_result( paste_id=paste_id,paste_txt=paste_txt,file='data/'+file,directory='data/'+directory )
                     return True
@@ -354,25 +363,40 @@ class Crawler:
         return False
 
     def save_result ( self, paste_id, paste_txt, file, directory ):
-        self.validpastes += 1
         paste_url = self.PASTESRAW_URL + (paste_id if paste_id[0] == '/' else '/' + paste_id)
         fn,ext = os.path.splitext(os.path.split(file)[1])
         timestamp = get_timestamp()
-        with open ( file, 'a' ) as matching:
-            matching.write ( fn + '-' + timestamp + '-' + paste_url + '\n' )
 
-        try:
-            os.mkdir(directory)
-        except KeyboardInterrupt:
-            raise
-        except:
-            pass
+        if paste_txt == '':
+            content = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
+            paste_txt = PyQuery(content)('#paste_code').text()
+            #paste_txt = PyQuery(url=paste_url)('#paste_code').text()
+        if fn == 'base64' and len(paste_txt) > 20:
+            codes = ''
+            r = re.findall(r'[\w\d+/=]{30,}',paste_txt)
+            if r:
+                for c in r:
+                    if len(c) > len(code):
+                        codes = c
+            decodes = base64.b64decode(codes).decode('unicode_escape').strip()
+            paste_txt = paste_txt.replace(codes,decodes).strip()
+            if not re.search('\w+',paste_txt,flags=re.I):
+                paste_txt = ''
+        else:
+            paste_txt = paste_txt + '\n'
 
-        with open( directory + '/' + fn + '_' + timestamp.replace('/','_').replace(':','_').replace(' ','__') + '_' + paste_id.replace('/','') + '.txt', mode='w' ) as paste:
-            if paste_txt == '':
-                paste_txt = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
-                #paste_txt = PyQuery(url=paste_url)('#paste_code').text()
-            paste.write(paste_txt + '\n')
+        if paste_txt != '':
+            self.validpastes += 1
+            with open ( file, 'a' ) as matching:
+                matching.write ( fn + '-' + timestamp + '-' + paste_url + '\n' )
+            try:
+                os.mkdir(directory)
+            except KeyboardInterrupt:
+                raise
+            except:
+                pass
+            with open( directory + '/' + fn + '_' + timestamp.replace('/','_').replace(':','_').replace(' ','__') + '_' + paste_id.replace('/','') + '.txt', mode='w' ) as paste:
+                paste.write(paste_txt)
 
 
     def start ( self, refresh_time, delay, ban_wait, flush_after_x_refreshes, connection_timeout, verbose ):
@@ -382,7 +406,6 @@ class Crawler:
             if self.kill_now == True:
                 exit()
 
-            self.conclude()
             start = time.time()
             status,pastes = self.get_pastes ()
             tooktime,times = self.check_stat(start,'get_pastes')
@@ -459,6 +482,8 @@ class Crawler:
                 self.totalerrors += 1
                 Logger().error('Unknown error. Maybe an encoding problem? Trying again.'.format(connection_timeout))
                 time.sleep(1)
+
+            self.conclude()
 
 def parse_input():
     parser = OptionParser()
