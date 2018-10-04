@@ -342,6 +342,9 @@ class Crawler:
             content = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
             paste_txt = PyQuery (content)('#paste_code').text()
 
+            if len(paste_txt) > 1024*256:
+                self.save_result( paste_id=paste_id,paste_txt=paste_txt,file='data/bigfiles.txt',directory='data/res' )
+                return True
             for regex,file,directory in self.regexes:
                 if self.kill_now == True:
                     exit()
@@ -368,7 +371,7 @@ class Crawler:
         timestamp = get_timestamp()
 
         if paste_txt == '':
-            content = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
+            content = urllib.request.urlopen(paste_url).read().strip()
             paste_txt = PyQuery(content)('#paste_code').text()
             #paste_txt = PyQuery(url=paste_url)('#paste_code').text()
         if fn == 'base64' and len(paste_txt) > 20:
@@ -376,12 +379,18 @@ class Crawler:
             r = re.findall(r'[\w\d+/=]{30,}',paste_txt)
             if r:
                 for c in r:
-                    if len(c) > len(code):
+                    if len(c) > len(codes):
                         codes = c
-            decodes = base64.b64decode(codes).decode('unicode_escape').strip()
-            paste_txt = paste_txt.replace(codes,decodes).strip()
-            if not re.search('\w+',paste_txt,flags=re.I):
-                paste_txt = ''
+            try:
+                i = (4 - len(codes) % 4) % 4
+                if 0 < i < 2:
+                    codes += "=" * i
+                decodes = base64.b64decode(codes).strip()
+                paste_txt = paste_txt.replace(codes,decodes).strip()
+                if not re.search('\w+',paste_txt,flags=re.I):
+                    paste_txt = ''
+            except:
+                pass
         else:
             paste_txt = paste_txt + '\n'
 
@@ -471,7 +480,7 @@ class Crawler:
                 delayed += 1
                 self.delayfactor = 1
                 Logger ().warn ( 'Damn! It looks like you have been banned (probably temporarily)' )
-                for n in range ( 0, ceil(ban_wait*random.gauss(1+delayed*0.2,0.2)) ):
+                for n in range ( 0, ceil(ban_wait*random.gauss(1+delayed*0.2,0.2)) if _ <= 60 else 60 ):	# max wait 60m
                     Logger (self.verbose).log ( 'Please wait ' + str ( ban_wait - n ) + ' more minute' + ( 's' if ( ban_wait - n ) > 1 else '' ) )
                     time.sleep ( 60 )
             elif status == self.CONNECTION_FAIL:
