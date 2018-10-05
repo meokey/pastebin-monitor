@@ -158,17 +158,34 @@ class Logger:
 
         if (self.verbose == True) or (is_bold == True):
 ## tar log files if the size reachs 128MB
-            size = os.path.getsize(logfile) or 0
-            if size > 1024*1024*128:
+            if os.path.exists(logfile) and os.path.getsize(logfile) > 1024*1024*128:
                 tarf = logfile+'.gz'
                 mode='w:gz'
                 with tarfile.open(tarf,mode) as out:
                     out.add(logfile)
                 os.remove(logfile)
-            with open(logfile, "a+") as logf:
-                logf.write(messages+"\n")
+        else:
+            messages = 'Status:' + messages
+
+        if not os.path.exists(logfile):
+            with open(logfile,'a+') as logf:
+                logf.write('Status: \n')
+        with open(logfile,'rb+') as logf:	# to replace
+            pos = logf.seek(0, os.SEEK_END) -1
+            while pos > 0 and logf.read(1).decode() != os.linesep:
+                pos -= 2
+                logf.seek(pos, os.SEEK_SET)
+                #print(pos)
+            logf.seek(pos+2, os.SEEK_SET)
+            a = logf.read(7).decode() or ''
+            if a != 'Status:':
+                logf.seek(1, os.SEEK_END)	# append to the end of file
+            else:
+                logf.seek(pos+2, os.SEEK_SET)	# overwrite the last line to continuously update status w/o increase log file
+            logf.write((messages+os.linesep).encode('utf-8'))
+
         if self.journal:
-            sys.stdout.write(message+"\n")
+            sys.stdout.write(message+os.linesep)
             sys.stdout.flush()
 
     def match(self, err):
@@ -339,7 +356,7 @@ class Crawler:
         paste_url = self.PASTEBIN_URL + (paste_id if paste_id[0] == '/' else '/' + paste_id)
         try:
             #paste_txt = PyQuery ( url = paste_url )('#paste_code').text()
-            content = urllib.request.urlopen(paste_url).read().decode('utf-8').strip()
+            content = urllib.request.urlopen(paste_url).read().strip()
             paste_txt = PyQuery (content)('#paste_code').text()
 
             if len(paste_txt) > 1024*256:
@@ -392,12 +409,12 @@ class Crawler:
             except:
                 pass
         else:
-            paste_txt = paste_txt + '\n'
+            paste_txt = paste_txt + os.linesep
 
         if paste_txt != '':
             self.validpastes += 1
             with open ( file, 'a' ) as matching:
-                matching.write ( fn + '-' + timestamp + '-' + paste_url + '\n' )
+                matching.write ( fn + '-' + timestamp + '-' + paste_url + os.linesep )
             try:
                 os.mkdir(directory)
             except KeyboardInterrupt:
