@@ -182,7 +182,6 @@ class Logger:
                 #print(pos)
             logf.seek(pos, os.SEEK_SET)
             a = logf.read(7) or ''
-            print(a)
             if a != b'Status:':
                 logf.seek(0, os.SEEK_END)	# append to the end of file
             else:
