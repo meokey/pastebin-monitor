@@ -171,17 +171,22 @@ class Logger:
             with open(logfile,'a+') as logf:
                 logf.write('Status: \n')
         with open(logfile,'rb+') as logf:	# to replace
-            pos = logf.seek(0, os.SEEK_END) -1
-            while pos > 0 and logf.read(1).decode() != os.linesep:
-                pos -= 2
+            pos = logf.seek(0, os.SEEK_END) - 1
+            while pos >= 0:
+                a = logf.read(1)
+                if a == b'\n':
+                    pos += 1	# move to next chat to '\n'
+                    break;
+                pos = (pos - 1) if pos > 1 else 0
                 logf.seek(pos, os.SEEK_SET)
                 #print(pos)
-            logf.seek(pos+2, os.SEEK_SET)
-            a = logf.read(7).decode() or ''
-            if a != 'Status:':
-                logf.seek(1, os.SEEK_END)	# append to the end of file
+            logf.seek(pos, os.SEEK_SET)
+            a = logf.read(7) or ''
+            print(a)
+            if a != b'Status:':
+                logf.seek(0, os.SEEK_END)	# append to the end of file
             else:
-                logf.seek(pos+2, os.SEEK_SET)	# overwrite the last line to continuously update status w/o increase log file
+                logf.seek(pos, os.SEEK_SET)	# overwrite the last line to continuously update status w/o increase log file
             logf.write((messages+os.linesep).encode('utf-8'))
 
         if self.journal:
