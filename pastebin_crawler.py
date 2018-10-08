@@ -186,6 +186,7 @@ class Logger:
                 logf.seek(0, os.SEEK_END)	# append to the end of file
             else:
                 logf.seek(pos, os.SEEK_SET)	# overwrite the last line to continuously update status w/o increase log file
+            logf.truncate()
             logf.write((messages+os.linesep).encode('utf-8'))
 
         if self.journal:
@@ -367,6 +368,7 @@ class Crawler:
                 self.save_result( paste_id=paste_id,paste_txt=paste_txt,file='data/bigfiles.txt',directory='data/res' )
                 return True
             for regex,file,directory in self.regexes:
+                Logger ().log ( 'Start to match {:s} using {:s}:{:s}:{:s} ...'.format(paste_id,directory,file,regex[:25]) )
                 if self.kill_now == True:
                     exit()
                 r = re.search ( regex, paste_txt, re.IGNORECASE )
@@ -458,7 +460,7 @@ class Crawler:
                     if paste_id not in self.prev_checked_ids:
                         chkedpaste += 1
                         start = time.time()
-                        #Logger(self.verbose).log('Start processing paste {:s}'.format(paste_id))
+                        #Logger().log('Start processing paste {:s}'.format(paste_id))
                         self.check_paste ( paste_id )
                         tooktime,times = self.check_stat(start,'check_paste')
                         if times >= 20:
